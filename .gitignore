@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+# Personal context, not for the public repo
+CLAUDE.md
+SESSION.md

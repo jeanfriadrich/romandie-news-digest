@@ -1,0 +1,54 @@
+name: Revue de presse romande
+
+# Quand le pipeline tourne :
+on:
+  schedule:
+    - cron: "0 5 * * *"     # tous les jours à 05:00 UTC (07:00 heure suisse d'été)
+  workflow_dispatch: {}      # bouton "Run workflow" pour lancer un test à la main
+
+# Droits dont le job a besoin (écrire dans le dépôt + publier la page) :
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generer la revue de presse
+        run: python3 digest.py
+
+      - name: Sauvegarder la revue dans le depot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add digests web data
+          if git diff --cached --quiet; then
+            echo "Aucun changement a committer."
+          else
+            git commit -m "Revue du jour [skip ci]"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
